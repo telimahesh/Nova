@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Zoya</string>
+    <string name="accessibility_service_description">Zoya Accessibility Service for auto-upgrading and world awareness.</string>
+</resources>

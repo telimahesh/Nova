@@ -1,0 +1,147 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: messages
+// Document ID: auto-generated
+// Fields:
+//   - text: string (required, 1-5000 chars) - The message content
+//   - isModel: bool (required) - Sender identity
+//   - timestamp: timestamp (required) - Creation time
+//   - uid: string (required) - Owner UID
+//   - sessionId: string (required) - Linked session ID
+//
+// Collection: profiles
+// Document ID: auto-generated
+// Fields:
+//   - name: string (required, 1-100 chars) - Profile name
+//   - voiceName: string (required) - Voice ID
+//   - personality: string (required, 1-10000 chars) - System prompt
+//   - uid: string (required) - Owner UID
+//   - isDefault: bool (optional) - Default flag
+//
+// Collection: sessions
+// Document ID: auto-generated
+// Fields:
+//   - title: string (required, 1-200 chars) - Session title
+//   - createdAt: timestamp (required) - Creation time
+//   - lastUpdatedAt: timestamp (required) - Last update time
+//   - uid: string (required) - Owner UID
+//   - profileId: string (optional) - Linked profile ID
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         (request.auth.token.email == "telimahesh36@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'id', 'role', 'createdAt']) &&
+             data.keys().hasOnly(['uid', 'id', 'role', 'createdAt', 'geminiApiKey', 'openaiApiKey', 'selectedGeminiModel', 'selectedOpenaiModel']) &&
+             data.uid is string &&
+             data.id is string &&
+             data.role in ['admin', 'user'] &&
+             data.createdAt is timestamp &&
+             (!('geminiApiKey' in data) || data.geminiApiKey is string) &&
+             (!('openaiApiKey' in data) || data.openaiApiKey is string) &&
+             (!('selectedGeminiModel' in data) || data.selectedGeminiModel is string) &&
+             (!('selectedOpenaiModel' in data) || data.selectedOpenaiModel is string);
+    }
+
+    // Domain Validators
+    function isValidMessage(data) {
+      return data.keys().hasAll(['text', 'isModel', 'timestamp', 'uid']) &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 5000 &&
+             data.isModel is bool &&
+             data.timestamp is timestamp &&
+             data.uid is string && data.uid == request.auth.uid &&
+             (!('sessionId' in data) || data.sessionId == null || data.sessionId is string);
+    }
+
+    function isValidProfile(data) {
+      return data.keys().hasAll(['name', 'voiceName', 'personality', 'uid']) &&
+             data.keys().hasOnly(['name', 'voiceName', 'personality', 'uid', 'isDefault']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.voiceName is string &&
+             data.personality is string && data.personality.size() <= 10000 &&
+             data.uid is string && data.uid == request.auth.uid &&
+             (!('isDefault' in data) || data.isDefault is bool);
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasAll(['title', 'createdAt', 'lastUpdatedAt', 'uid']) &&
+             data.keys().hasOnly(['title', 'createdAt', 'lastUpdatedAt', 'uid', 'profileId']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.createdAt is timestamp &&
+             data.lastUpdatedAt is timestamp &&
+             data.uid is string && data.uid == request.auth.uid &&
+             (!('profileId' in data) || data.profileId == null || data.profileId is string);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /config/global {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && isValidMessage(request.resource.data);
+      allow update: if false; // Messages are immutable
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    match /profiles/{profileId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && isValidProfile(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && isValidProfile(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow create: if isAuthenticated() && isValidSession(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && isValidSession(request.resource.data);
+      allow delete: if isAuthenticated() && resource.data.uid == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow get: if isAuthenticated() && (request.auth.uid == userId || resource.data.uid == request.auth.uid || isAdmin());
+      allow list: if isAuthenticated() && (isAdmin() || resource.data.uid == request.auth.uid || request.query.limit <= 5);
+      allow create: if isAuthenticated() && (isAdmin() || (request.resource.data.id == "587311" && !exists(/databases/$(database)/documents/users/$(request.auth.uid))) || (request.resource.data.uid == request.auth.uid && request.resource.data.role == "user"));
+      allow update: if isAuthenticated() && (isAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) || (resource.data.uid == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) || (resource.data.id != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid', 'updatedAt'])));
+      allow delete: if isAuthenticated() && (isAdmin() || resource.data.uid == request.auth.uid);
+    }
+
+    // Allow the connection test
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

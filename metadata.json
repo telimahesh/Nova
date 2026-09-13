@@ -1,0 +1,5 @@
+{
+  "name": "Zoya AI Assistant",
+  "description": "A personal, sassy, and witty voice-to-voice AI assistant named Zoya.",
+  "requestFramePermissions": ["microphone", "camera", "display-capture", "geolocation", "screen-wake-lock"]
+}

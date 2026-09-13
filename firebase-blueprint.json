@@ -1,0 +1,164 @@
+{
+  "entities": {
+    "GlobalConfig": {
+      "title": "GlobalConfig",
+      "description": "System-wide configuration settings.",
+      "type": "object",
+      "properties": {
+        "geminiApiKey": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedBy": {
+          "type": "string"
+        }
+      }
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A single message in a conversation with Zoya.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The content of the message."
+        },
+        "isModel": {
+          "type": "boolean",
+          "description": "True if the message is from Zoya, false if from the user."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the message was sent."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The UID of the user who owns this message."
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "The ID of the session this message belongs to."
+        }
+      },
+      "required": ["text", "isModel", "timestamp", "uid", "sessionId"]
+    },
+    "VoiceProfile": {
+      "title": "VoiceProfile",
+      "description": "A customizable persona and voice configuration for Zoya.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the profile (e.g., 'Sassy Zoya', 'Professional Zoya')."
+        },
+        "voiceName": {
+          "type": "string",
+          "description": "The Gemini Live voice ID."
+        },
+        "personality": {
+          "type": "string",
+          "description": "The system instruction defining personality and speech patterns."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The UID of the user who owns this profile."
+        },
+        "isDefault": {
+          "type": "boolean",
+          "description": "Whether this is the user's active profile."
+        }
+      },
+      "required": ["name", "voiceName", "personality", "uid"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "A conversation session containing multiple messages.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "A summary or title for the session."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the session was started."
+        },
+        "lastUpdatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the last message was added."
+        },
+        "uid": {
+          "type": "string",
+          "description": "The UID of the user who owns this session."
+        },
+        "profileId": {
+          "type": "string",
+          "description": "The ID of the VoiceProfile used during this session."
+        }
+      },
+      "required": ["title", "createdAt", "lastUpdatedAt", "uid"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User account and AI configuration.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"]
+        },
+        "geminiApiKey": {
+          "type": "string"
+        },
+        "openaiApiKey": {
+          "type": "string"
+        },
+        "selectedGeminiModel": {
+          "type": "string"
+        },
+        "selectedOpenaiModel": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "id", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Collection of all conversation messages."
+    },
+    "/profiles/{profileId}": {
+      "schema": "VoiceProfile",
+      "description": "User-created voice and personality profiles."
+    },
+    "/sessions/{sessionId}": {
+      "schema": "ChatSession",
+      "description": "Collection of conversation sessions."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and settings."
+    },
+    "/config/global": {
+      "schema": "GlobalConfig",
+      "description": "System-wide global configuration."
+    }
+  }
+}
